@@ -1,12 +1,17 @@
 <template>
+  <Terminal />
   <div> {{ output }} </div>
   <p> <el-button @click='testCall()' > Butyon </el-button> </p>
 </template>
 
 <script>
 import axios from 'axios'
-import { ref } from 'vue'
+import Terminal from './Terminal.vue'
+import { onBeforeMount, ref } from 'vue'
 export default {
+  components: {
+    Terminal,
+  },
   setup() {
     const output = ref('')
     async function testCall() {
