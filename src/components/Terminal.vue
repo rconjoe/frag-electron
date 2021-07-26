@@ -1,8 +1,20 @@
 <template>
-<div class="box">
-  <div id="xterm"> </div>
-  <el-input></el-input>
+<el-row>
+  <el-col :span='24'>
+  <div class="box">
+    <h4> {{ hostname }} </h4>
+    <div>
+      <!-- <el-input
+        v-model='command'
+        > </el-input> -->
+    </div>
+    <el-button @click="ls"> ls </el-button>
+    <!-- <el-button @click="installLGSMDeps"> Install LGSM Deps </el-button> -->
+    <p> {{ output }} </p>
+    <div id="xterm"> </div>
   </div>
+  </el-col>
+</el-row>
 </template>
 
 <script>
@@ -12,16 +24,27 @@ import { AttachAddon } from 'xterm-addon-attach'
 import "xterm/css/xterm.css";
 import "xterm/lib/xterm.js";
 import io from 'socket.io-client'
+import axios from 'axios'
 export default {
+  props: ['url'],
   data: () => ({
     term: '',
     socket: '',
+    output: '',
+    command: '',
+    hostname: '',
   }),
   mounted() {
-    let url = 'http://172.16.1.140:3000'
-    this.init(url)
+    this.init(this.url)
+    this.fetchHostname(this.url)
   },
   methods: {
+    async fetchHostname(url) {
+      await axios.get('http://172.16.1.140:3000/hostname')
+      .then((response) => {
+        this.hostname = response.data.stdout
+      })
+    },
     initXTerm() {
       this.term = new Terminal({
         rendererType: "canvas", //Rendering type
@@ -39,6 +62,7 @@ export default {
       this.term.open(document.getElementById('xterm'))
       const fitaddon = new FitAddon()
       this.term.loadAddon(fitaddon)
+      fitaddon.fit()
       const attachaddon = new AttachAddon(this.socket)
       this.term.loadAddon(attachaddon)
       this.term.onData((key) => {
@@ -62,6 +86,13 @@ export default {
         console.log(data)
       })
     },
+    async ls() {
+      await axios.get('http://172.16.1.140:3000/ls')
+      .then((response) => {
+        console.log(response.data.stdout)
+        this.output = response.data.stdout
+      })
+    },
     open() {
       this.initXTerm()
     },
@@ -73,6 +104,21 @@ export default {
     },
     send(order) {
       this.socket.send(order)
+    },
+    async exec() {
+      await axios.post('http://172.16.1.140:3000/exec', {
+        command: this.command
+      })
+      .then((response) => {
+        console.log(response.data.stdout)
+        this.output = response.data.stdout
+      })
+      .catch(error => {
+        console.error(error)
+      })
+    },
+    installLGSMDeps() {
+      this.send("./.install_lgsm_deps.sh \n")
     }
   }
 }
@@ -80,8 +126,8 @@ export default {
 
 <style>
 .box {
-  width: 100%;
-  height: 100%;
+  width: 700px;
+  height: 1000px;
+  position: absolute;
 }
-
 </style>
